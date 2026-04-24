@@ -157,3 +157,34 @@ func findSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+func TestEnvOverrides(t *testing.T) {
+	// Set env vars
+	os.Setenv("MYCLI_MODEL", "test-model")
+	os.Setenv("MYCLI_CODE_MODE", "auto")
+	os.Setenv("MYCLI_TOKEN_BUDGET", "80000")
+	defer func() {
+		os.Unsetenv("MYCLI_MODEL")
+		os.Unsetenv("MYCLI_CODE_MODE")
+		os.Unsetenv("MYCLI_TOKEN_BUDGET")
+	}()
+
+	// Load default config
+	cfg := DefaultConfig()
+
+	// Apply env overrides
+	ApplyEnvOverrides(cfg)
+
+	// Verify overrides
+	if cfg.Providers.OpenRouter.DefaultModel != "test-model" {
+		t.Errorf("expected test-model, got %s", cfg.Providers.OpenRouter.DefaultModel)
+	}
+
+	if cfg.Behavior.CodeMode != "auto" {
+		t.Errorf("expected auto, got %s", cfg.Behavior.CodeMode)
+	}
+
+	if cfg.Behavior.TokenBudget != 80000 {
+		t.Errorf("expected 80000, got %d", cfg.Behavior.TokenBudget)
+	}
+}
