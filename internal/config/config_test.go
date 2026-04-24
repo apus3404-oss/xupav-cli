@@ -2,6 +2,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 )
 
@@ -19,5 +20,33 @@ func TestDefaultConfig(t *testing.T) {
 
 	if cfg.Behavior.CodeMode != "interactive" {
 		t.Errorf("expected code mode interactive, got %s", cfg.Behavior.CodeMode)
+	}
+}
+
+func TestConfigLoadSave(t *testing.T) {
+	// Create temp config file
+	tmpFile := "/tmp/test-config.yaml"
+	defer os.Remove(tmpFile)
+
+	// Create config
+	cfg := DefaultConfig()
+	cfg.Providers.OpenRouter.DefaultModel = "test-model"
+
+	// Save
+	err := cfg.Save(tmpFile)
+	if err != nil {
+		t.Fatalf("failed to save config: %v", err)
+	}
+
+	// Load
+	loaded, err := Load(tmpFile)
+	if err != nil {
+		t.Fatalf("failed to load config: %v", err)
+	}
+
+	// Verify
+	if loaded.Providers.OpenRouter.DefaultModel != "test-model" {
+		t.Errorf("expected test-model, got %s",
+			loaded.Providers.OpenRouter.DefaultModel)
 	}
 }
