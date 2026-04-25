@@ -136,3 +136,49 @@ def test_openrouter_stream(mocker):
     chunks = list(provider.stream_chat("test", model="deepseek/deepseek-r1"))
 
     assert chunks == ["Hello", " world", "!"]
+
+
+def test_ollama_chat(mocker):
+    """Test Ollama provider chat method"""
+    from mycli_ai.providers.ollama import OllamaProvider
+
+    # Mock ollama client response
+    mock_response = {
+        "message": {"content": "test response"},
+        "eval_count": 100,
+        "prompt_eval_count": 50
+    }
+
+    mock_client = mocker.Mock()
+    mock_client.chat.return_value = mock_response
+    mocker.patch('ollama.Client', return_value=mock_client)
+
+    # Test
+    provider = OllamaProvider(base_url="http://localhost:11434")
+    response = provider.chat("test message", model="codellama:13b")
+
+    assert response.content == "test response"
+    assert response.tokens == 150
+    assert response.cost == 0.0  # Ollama is free
+
+
+def test_ollama_stream(mocker):
+    """Test Ollama provider streaming"""
+    from mycli_ai.providers.ollama import OllamaProvider
+
+    # Mock streaming response chunks
+    mock_chunks = [
+        {"message": {"content": "Hello"}},
+        {"message": {"content": " world"}},
+        {"message": {"content": "!"}},
+    ]
+
+    mock_client = mocker.Mock()
+    mock_client.chat.return_value = iter(mock_chunks)
+    mocker.patch('ollama.Client', return_value=mock_client)
+
+    # Test
+    provider = OllamaProvider(base_url="http://localhost:11434")
+    chunks = list(provider.stream_chat("test", model="codellama:13b"))
+
+    assert chunks == ["Hello", " world", "!"]
