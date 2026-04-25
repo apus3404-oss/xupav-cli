@@ -66,3 +66,73 @@ def test_mock_provider_stream():
     assert len(chunks) == 2
     assert chunks[0] == "Hello "
     assert chunks[1] == "world "
+
+
+def test_openrouter_chat(mocker):
+    """Test OpenRouter provider chat method"""
+    from mycli_ai.providers.openrouter import OpenRouterProvider
+
+    # Mock OpenAI client response
+    mock_message = mocker.Mock()
+    mock_message.content = "test response"
+
+    mock_choice = mocker.Mock()
+    mock_choice.message = mock_message
+
+    mock_usage = mocker.Mock()
+    mock_usage.total_tokens = 150
+    mock_usage.prompt_tokens = 50
+    mock_usage.completion_tokens = 100
+
+    mock_response = mocker.Mock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = mock_usage
+
+    mock_client = mocker.Mock()
+    mock_client.chat.completions.create.return_value = mock_response
+    mocker.patch('openai.OpenAI', return_value=mock_client)
+
+    # Test
+    provider = OpenRouterProvider(api_key="test-key")
+    response = provider.chat("test message", model="deepseek/deepseek-r1")
+
+    assert response.content == "test response"
+    assert response.tokens == 150
+    assert response.cost > 0
+
+
+def test_openrouter_stream(mocker):
+    """Test OpenRouter provider streaming"""
+    from mycli_ai.providers.openrouter import OpenRouterProvider
+
+    # Mock streaming response chunks
+    mock_delta1 = mocker.Mock()
+    mock_delta1.content = "Hello"
+    mock_choice1 = mocker.Mock()
+    mock_choice1.delta = mock_delta1
+    mock_chunk1 = mocker.Mock()
+    mock_chunk1.choices = [mock_choice1]
+
+    mock_delta2 = mocker.Mock()
+    mock_delta2.content = " world"
+    mock_choice2 = mocker.Mock()
+    mock_choice2.delta = mock_delta2
+    mock_chunk2 = mocker.Mock()
+    mock_chunk2.choices = [mock_choice2]
+
+    mock_delta3 = mocker.Mock()
+    mock_delta3.content = "!"
+    mock_choice3 = mocker.Mock()
+    mock_choice3.delta = mock_delta3
+    mock_chunk3 = mocker.Mock()
+    mock_chunk3.choices = [mock_choice3]
+
+    mock_client = mocker.Mock()
+    mock_client.chat.completions.create.return_value = iter([mock_chunk1, mock_chunk2, mock_chunk3])
+    mocker.patch('openai.OpenAI', return_value=mock_client)
+
+    # Test
+    provider = OpenRouterProvider(api_key="test-key")
+    chunks = list(provider.stream_chat("test", model="deepseek/deepseek-r1"))
+
+    assert chunks == ["Hello", " world", "!"]
