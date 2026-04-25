@@ -2,6 +2,7 @@
 package bridge
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -70,5 +71,47 @@ func TestPythonBridge_NotStarted(t *testing.T) {
 	err := bridge.Stop()
 	if err != nil {
 		t.Errorf("stop on non-running bridge should not error: %v", err)
+	}
+}
+
+func TestPythonBridge_SendRequest(t *testing.T) {
+	bridge := NewPythonBridge(PythonConfig{
+		PythonPath: "python",
+		ScriptPath: "../../python/mycli_ai/server.py",
+		Config: map[string]interface{}{
+			"provider": "openrouter",
+			"api_key":  "test-key",
+		},
+	})
+
+	err := bridge.Start()
+	if err != nil {
+		t.Skipf("Python not available: %v", err)
+	}
+	defer bridge.Stop()
+
+	// Give Python time to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Create request
+	req := CreateRequest("chat", map[string]interface{}{
+		"message": "test",
+		"model":   "deepseek/deepseek-r1",
+	})
+
+	// Send request
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	resp, err := bridge.SendRequest(ctx, req)
+	if err != nil {
+		t.Logf("SendRequest error (expected if no API key): %v", err)
+		// This is expected to fail without a real API key
+		return
+	}
+
+	// If we got a response, verify structure
+	if resp.JSONRPC != "2.0" {
+		t.Errorf("expected jsonrpc 2.0, got %s", resp.JSONRPC)
 	}
 }

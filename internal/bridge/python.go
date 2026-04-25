@@ -3,6 +3,7 @@ package bridge
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -228,3 +229,55 @@ func (b *PythonBridge) Write(data []byte) error {
 
 	return nil
 }
+
+// SendRequest sends a JSON-RPC request and waits for response
+func (b *PythonBridge) SendRequest(ctx context.Context, req *JSONRPCRequest) (*JSONRPCResponse, error) {
+	if !b.IsRunning() {
+		return nil, NewBridgeError("send_request", fmt.Errorf("bridge not running"))
+	}
+
+	// Marshal request
+	data, err := json.Marshal(req)
+	if err != nil {
+		return nil, NewBridgeError("send_request", err)
+	}
+
+	// Write request
+	if err := b.Write(append(data, '\n')); err != nil {
+		return nil, err
+	}
+
+	// Read response with timeout
+	responseChan := make(chan *JSONRPCResponse, 1)
+	errorChan := make(chan error, 1)
+
+	go func() {
+		line, err := b.stdout.ReadString('\n')
+		if err != nil {
+			errorChan <- NewBridgeError("read_response", err)
+			return
+		}
+
+		var resp JSONRPCResponse
+		if err := json.Unmarshal([]byte(line), &resp); err != nil {
+			errorChan <- NewBridgeError("parse_response", err)
+			return
+		}
+
+		responseChan <- &resp
+	}()
+
+	// Wait for response or timeout
+	select {
+	case resp := <-responseChan:
+		if resp.IsError() {
+			return resp, resp.GetError()
+		}
+		return resp, nil
+	case err := <-errorChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, NewBridgeError("send_request", ErrTimeout)
+	}
+}
+
