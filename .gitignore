@@ -21,3 +21,18 @@ Thumbs.db
 
 # Build artifacts
 dist/
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.egg-info/
+pip-build-*/
+pip-install-*/
+pip-metadata-*/
+pip-modern-metadata-*/
+pip-unpack-*/
+pip-build-tracker-*/
+tmp*/
