@@ -33,11 +33,13 @@ The assistant can help you:
 		}
 
 		// Check API key
+		var apiKey string
 		if cfg.Providers.OpenRouter.Enabled {
-			_, err := config.GetOpenRouterKey()
+			key, err := config.GetOpenRouterKey()
 			if err != nil {
 				return fmt.Errorf("OpenRouter API key not found. Run: mycli config set-key openrouter")
 			}
+			apiKey = key
 		}
 
 		// Create Python bridge
@@ -45,7 +47,7 @@ The assistant can help you:
 			PythonPath: "python",
 			Config: map[string]interface{}{
 				"provider": "openrouter",
-				"api_key":  "test-key", // Will be loaded from keychain in future
+				"api_key":  apiKey,
 			},
 		})
 
