@@ -3,6 +3,8 @@ package tui
 
 import (
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestMessage(t *testing.T) {
@@ -60,3 +62,45 @@ func TestModel_GetLastMessage(t *testing.T) {
 		t.Errorf("expected 'second', got %s", last.Content)
 	}
 }
+
+func TestModel_HandleKeyPress(t *testing.T) {
+	model := NewModel()
+
+	// Type some text
+	model.Input.SetValue("hello")
+
+	// Simulate Enter key (send message)
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd := model.Update(msg)
+
+	m := newModel.(Model)
+
+	// Input should be cleared
+	if m.Input.Value() != "" {
+		t.Errorf("expected empty input, got %s", m.Input.Value())
+	}
+
+	// Should have command
+	if cmd == nil {
+		t.Error("expected command, got nil")
+	}
+}
+
+func TestModel_HandleResize(t *testing.T) {
+	model := NewModel()
+
+	// Simulate window resize
+	msg := tea.WindowSizeMsg{Width: 120, Height: 40}
+	newModel, _ := model.Update(msg)
+
+	m := newModel.(Model)
+
+	if m.Width != 120 {
+		t.Errorf("expected width 120, got %d", m.Width)
+	}
+
+	if m.Height != 40 {
+		t.Errorf("expected height 40, got %d", m.Height)
+	}
+}
+
