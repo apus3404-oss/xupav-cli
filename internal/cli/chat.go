@@ -4,7 +4,9 @@ package cli
 import (
 	"fmt"
 
+	"github.com/apus3404-oss/xupav-cli/internal/bridge"
 	"github.com/apus3404-oss/xupav-cli/internal/config"
+	"github.com/apus3404-oss/xupav-cli/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -38,10 +40,26 @@ The assistant can help you:
 			}
 		}
 
-		// TODO: Launch TUI (will be implemented in Plan D)
-		fmt.Println("🤖 mycli chat")
-		fmt.Println("Chat functionality will be implemented in the next phase.")
-		fmt.Println("For now, configuration is ready!")
+		// Create Python bridge
+		pythonBridge := bridge.NewPythonBridge(bridge.PythonConfig{
+			PythonPath: "python",
+			Config: map[string]interface{}{
+				"provider": "openrouter",
+				"api_key":  "test-key", // Will be loaded from keychain in future
+			},
+		})
+
+		// Start bridge
+		if err := pythonBridge.Start(); err != nil {
+			return fmt.Errorf("failed to start Python bridge: %w", err)
+		}
+		defer pythonBridge.Stop()
+
+		// Create and run TUI
+		app := tui.NewApp(cfg, pythonBridge)
+		if err := app.Run(); err != nil {
+			return fmt.Errorf("TUI error: %w", err)
+		}
 
 		return nil
 	},
